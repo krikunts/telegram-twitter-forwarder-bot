@@ -10,7 +10,7 @@ from tweepy.auth import OAuthHandler
 from tweepy.error import TweepError
 
 from models import Subscription
-from util import with_touched_chat, escape_markdown, markdown_twitter_usernames
+from util import with_touched_chat, escape_markdown, markdown_tweet_link
 
 TIMEZONE_LIST_URL = "https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"
 
@@ -211,16 +211,18 @@ def cmd_all(bot, update, chat=None):
     text = ""
 
     for sub in subscriptions:
-        if sub.last_tweet is None:
+        screen_name = sub.tw_user.screen_name
+        tweet = sub.last_tweet
+        if tweet is None:
             text += "\n{screen_name}: <no tweets yet>".format(
-                screen_name=escape_markdown(sub.tw_user.screen_name),
+                screen_name=escape_markdown(screen_name),
             )
         else:
             text += ("\n{screen_name}:\n{text} "
-                     "[link](https://twitter.com/{screen_name}/status/{tw_id})").format(
-                text=markdown_twitter_usernames(escape_markdown(sub.last_tweet.text)),
-                tw_id=sub.last_tweet.tw_id,
-                screen_name=escape_markdown(sub.tw_user.screen_name),
+                     "{link}").format(
+                screen_name=escape_markdown(screen_name),
+                text=tweet.text,
+                link=markdown_tweet_link("link", screen_name, tweet.tw_id)
             )
 
     bot.reply(update, text,

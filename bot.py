@@ -7,7 +7,7 @@ from telegram import Bot
 from telegram.error import TelegramError
 
 from models import TelegramChat, TwitterUser
-from util import escape_markdown, prepare_tweet_text
+from util import escape_markdown, prepare_tweet_text, markdown_username_link, markdown_tweet_link
 
 
 class TwitterForwarderBot(Bot):
@@ -45,17 +45,17 @@ class TwitterForwarderBot(Bot):
                 chat_id=chat.chat_id,
                 disable_web_page_preview=not photo_url,
                 text="""
-{link_preview}*{name}* ([@{screen_name}](https://twitter.com/{screen_name})) at {created_at}:
+{link_preview}*{name}* ({author_link}) at {created_at}:
 {text}
--- [Link to this Tweet](https://twitter.com/{screen_name}/status/{tw_id})
+-- {tweet_link}
 """
                     .format(
                     link_preview=photo_url,
-                    text=prepare_tweet_text(tweet.text),
+                    text=tweet.text,
                     name=escape_markdown(tweet.name),
-                    screen_name=tweet.screen_name,
+                    author_link=markdown_username_link(tweet.screen_name),
                     created_at=created_at,
-                    tw_id=tweet.tw_id,
+                    tweet_link=markdown_tweet_link('Link to this Tweet', tweet.screen_name, tweet.tw_id)
                 ),
                 parse_mode=telegram.ParseMode.MARKDOWN)
 

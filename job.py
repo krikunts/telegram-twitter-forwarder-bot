@@ -1,4 +1,3 @@
-import html
 import logging
 import math
 import re
@@ -10,6 +9,7 @@ from telegram.error import TelegramError
 from telegram.ext import Job
 
 from models import TwitterUser, Tweet, Subscription, db, TelegramChat
+from util import prepare_tweet_text
 
 INFO_CLEANUP = {
     'NOTFOUND': "Your subscription to @{} was removed because that profile doesn't exist anymore. Maybe the account's name changed?",
@@ -98,7 +98,6 @@ class FetchAndSendTweetsJob(Job):
                 extensions = ('.jpg', '.jpeg', '.png', '.gif')
                 pattern = '[(%s)]$' % ')('.join(extensions)
                 photo_url = ''
-                tweet_text = html.unescape(tweet.text)
                 if 'media' in tweet.entities:
                     photo_url = tweet.entities['media'][0]['media_url_https']
                 else:
@@ -110,15 +109,9 @@ class FetchAndSendTweetsJob(Job):
                 if photo_url:
                     self.logger.debug("- - Found media URL in tweet: " + photo_url)
 
-                for url_entity in tweet.entities['urls']:
-                    expanded_url = url_entity['expanded_url']
-                    indices = url_entity['indices']
-                    display_url = tweet.text[indices[0]:indices[1]]
-                    tweet_text = tweet_text.replace(display_url, expanded_url)
-
                 tw_data = {
                     'tw_id': tweet.id,
-                    'text': tweet_text,
+                    'text': prepare_tweet_text(tweet),
                     'created_at': tweet.created_at,
                     'twitter_user': tw_user,
                     'photo_url': photo_url,
@@ -224,7 +217,7 @@ class FetchAndSendTweetsJob(Job):
             self.logger.debug("- Cleaning up TwitterUser @{}".format(tw_user.screen_name, reason))
             tw_user.delete_instance()
 
-            self.logger.debug ("- Cleanup finished")
+            self.logger.debug("- Cleanup finished")
 
         self.logger.debug("Cleaning up TelegramChats marked for deletion")
         for chat in TelegramChat.select().where(TelegramChat.delete_soon == True):
